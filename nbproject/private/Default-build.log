@@ -1,0 +1,22 @@
+g++ -MT .o/leanbwt.o -MMD -MP -MF .d/leanbwt.Td -std=c++11  -Isrc -Isrc/commands -Isrc/index -Isrc/shared -Isrc/transform -c -o .o/leanbwt.o src/leanbwt.cpp
+src/leanbwt.cpp:27:1: error: ‘Parameters’ does not name a type
+ Parameters params;
+ ^~~~~~~~~~
+src/leanbwt.cpp: In function ‘void printUsage()’:
+src/leanbwt.cpp:31:5: error: ‘cout’ was not declared in this scope
+     cout << endl << "LeanBWT version " << LOCASS_VERSION << endl;
+     ^~~~
+src/leanbwt.cpp:31:5: note: suggested alternative: ‘cosl’
+     cout << endl << "LeanBWT version " << LOCASS_VERSION << endl;
+     ^~~~
+     cosl
+src/leanbwt.cpp: In function ‘int main(int, char**)’:
+src/leanbwt.cpp:54:13: error: ‘cerr’ was not declared in this scope
+             cerr << "Unrecognised command: \"" << argv[1] << "\"" << endl << endl;
+             ^~~~
+src/leanbwt.cpp:54:13: note: suggested alternative: ‘erf’
+             cerr << "Unrecognised command: \"" << argv[1] << "\"" << endl << endl;
+             ^~~~
+             erf
+Makefile:63: recipe for target '.o/leanbwt.o' failed
+make: *** [.o/leanbwt.o] Error 1

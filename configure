@@ -1,0 +1,30 @@
+#!/bin/sh
+
+prefix=/usr/local/bin/
+debug=false
+
+for arg in "$@"; do
+    case "$arg" in
+    --prefix=*)
+        prefix=`echo $arg | sed 's/--prefix=//'`
+        ;;
+
+    --debug)
+        debug=true;;
+
+    --help)
+        echo 'usage: ./configure [options]'
+        echo 'options:'
+        echo '  --prefix=<path>: installation prefix'
+        exit 0
+        ;;
+    esac
+done
+
+echo 'Creating makefile...'
+echo "PREFIX = $prefix" >Makefile
+if $debug; then
+    echo "DBG =-g" >>Makefile
+fi
+cat Makefile.in >>Makefile
+echo 'Makefile created, type "make" to build.'
