@@ -140,6 +140,7 @@ PreprocessFiles::PreprocessFiles( string inPrefix, bool overwrite )
 : Filenames( inPrefix )
 {
     tmpSingles = prefix + "-tmpSingles.seq";
+    tmpChr = prefix + "-chr.dat";
     for ( int i( 0 ); i < 2; i++ )
     {
         tmpBwt[i] = prefix + "-bwt-tmp" + to_string( i + 1 );
@@ -167,6 +168,7 @@ PreprocessFiles::PreprocessFiles( string inPrefix, bool overwrite )
 void PreprocessFiles::clean()
 {
     removeFile( tmpSingles );
+    removeFile( tmpChr );
     for ( int i( 0 ); i < 2; i++ )
     {
         removeFile( tmpBwt[i] );
@@ -182,7 +184,7 @@ void PreprocessFiles::clean()
     }
 }
 
-void PreprocessFiles::setBinaryWrite( FILE* &outBin, FILE* &outBwt, FILE* &outEnd, FILE* (&outIns)[4], FILE* (&outIds)[4][4] )
+void PreprocessFiles::setBinaryWrite( FILE* &outBin, FILE* &outBwt, FILE* &outEnd, FILE* (&outIns)[4], FILE* (&outIds)[4][5] )
 {
     outBin = getWritePointer( bin );
     outBwt = getWritePointer( tmpBwt[0] );
@@ -207,13 +209,31 @@ void PreprocessFiles::setCycler( FILE* &inBwt, FILE* &outBwt, FILE* &inEnd, FILE
     outEnd = getWritePointer( tmpEnd[!iIn] );
     for ( int i ( 0 ); i < 4; i++ )
     {
-        outIns[i] = getWritePointer( tmpIns[!iIn][i] );
+        outIns[i] = getReadPointer( tmpIns[!iIn][i], true );
         for ( int j ( 0 ); j < 5; j++ )
         {
-            outIds[i][j] = getWritePointer( tmpIds[!iIn][i][j] );
+            outIds[i][j] = getReadPointer( tmpIds[!iIn][i][j], true );
         }
     }
 }
+
+//void PreprocessFiles::setCycler( FILE* &inBwt, FILE* &outBwt, FILE* &inEnd, FILE* &outEnd, FILE* (&outIns)[4], FILE* (&outIds)[4][5], uint8_t cycle )
+//{
+//    uint8_t iIn = cycle & 1;
+//    
+//    inBwt = getReadPointer( tmpBwt[iIn], false );
+//    outBwt = getWritePointer( tmpBwt[!iIn] );
+//    inEnd = getReadPointer( tmpEnd[iIn], false );
+//    outEnd = getWritePointer( tmpEnd[!iIn] );
+//    for ( int i ( 0 ); i < 4; i++ )
+//    {
+//        outIns[i] = getWritePointer( tmpIns[!iIn][i] );
+//        for ( int j ( 0 ); j < 5; j++ )
+//        {
+//            outIds[i][j] = getWritePointer( tmpIds[!iIn][i][j] );
+//        }
+//    }
+//}
 
 void PreprocessFiles::setCyclerIter( FILE* &inIns, FILE* (&inIds)[5], uint8_t cycle, uint8_t i )
 {

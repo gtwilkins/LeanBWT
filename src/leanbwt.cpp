@@ -24,8 +24,12 @@
 #include <iostream>
 #include "shared/types.h"
 #include "commands/index.h"
+#include "match.h"
+#include "overlap.h"
+#include "shared_functions.h"
+#include "parameters.h"
 
-//Parameters params;
+Parameters params;
 
 void printUsage()
 {
@@ -50,6 +54,14 @@ int main( int argc, char** argv )
         {
             Index( argc, argv );
         }
+//        else if ( !strcmp( argv[1], "match" ) )
+//        {
+//            Match( argc, argv );
+//        }
+//        else if ( !strcmp( argv[1], "overlap" ) )
+//        {
+//            Overlap( argc, argv );
+//        }
         else
         {
             cerr << "Unrecognised command: \"" << argv[1] << "\"" << endl << endl;

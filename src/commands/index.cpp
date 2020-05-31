@@ -31,12 +31,14 @@
 Index::Index( int argc, char** argv )
 {
     ifstream infile;
+    string prefix;
     PreprocessFiles* fns = NULL;
     bool isResume = false;
-    bool isNew = false;
+    bool didInput = false;
+    bool doRevComp = true;
     int minScore = 0;
     
-    for ( int i ( 2 ); i < argc; )
+    for ( int i ( 2 ); i < argc; i++ )
     {
         if ( !strcmp( argv[i], "-h" ) )
         {
@@ -45,19 +47,18 @@ Index::Index( int argc, char** argv )
         }
         else if ( !strcmp( argv[i], "-i" ) )
         {
-            if ( isNew )
+            if ( didInput )
             {
                 cerr << "Error: multiple inputs provided." << endl;
                 exit( EXIT_FAILURE );
             }
-            isNew = true;
-            infile.open( argv[i+1] );
+            didInput = true;
+            infile.open( argv[++i] );
             if ( !infile.good() )
             {
-                cerr << "Failed to open file: \"" << argv[i+1] << "\"" << endl;
+                cerr << "Failed to open file: \"" << argv[i] << "\"" << endl;
                 exit( EXIT_FAILURE );
             }
-            i += 2;
         }
         else if ( !strcmp( argv[i], "-p" ) )
         {
@@ -66,7 +67,7 @@ Index::Index( int argc, char** argv )
                 cerr << "Error: more than one output prefix provided." << endl;
                 exit( EXIT_FAILURE );
             }
-            string prefix = argv[i+1];
+            prefix = argv[++i];
             if ( prefix[0] != '/' )
             {
                 string curr = getcwd( NULL, 0 );
@@ -78,20 +79,10 @@ Index::Index( int argc, char** argv )
                 }
                 prefix = curr + prefix;
             }
-            
-            fns = new PreprocessFiles( prefix );
-            i += 2;
         }
-        else if ( !strcmp( argv[i], "-s" ) )
-        {
-            minScore = stoi( argv[i+1] );
-            i += 2;
-        }
-        else if ( !strcmp( argv[i], "--resume" ) )
-        {
-            isResume = true;
-            i++;
-        }
+        else if ( !strcmp( argv[i], "-s" ) ) minScore = stoi( argv[++i] );
+        else if ( !strcmp( argv[i], "--resume" ) ) isResume = true;
+        else if ( !strcmp( argv[i], "--no-rev-comp" ) ) doRevComp = false;
         else
         {
             cerr << "Unrecognised argument: \"" << argv[i] << "\"" << endl << endl;
@@ -109,20 +100,23 @@ Index::Index( int argc, char** argv )
     
     double preprocessStartTime = clock();
     
-    if ( !fns )
+    if ( prefix.empty() )
     {
         cerr << "Error: no output prefix supplied." << endl;
         exit( EXIT_FAILURE );
     }
-    if ( isResume && isNew )
+    
+    fns = new PreprocessFiles( prefix, true );
+    
+    if ( isResume && didInput )
     {
         cerr << "Error: resume (--resume) and input (-i) are mutually exclusive arguments." << endl;
         cerr << "If you wish to resume (--resume), simply specify the output prefix (-o) previously used." << endl;
         exit( EXIT_FAILURE );
     }
-    else if ( isNew )
+    else if ( didInput )
     {
-        newTransform( fns, minScore, infile );
+        newTransform( fns, minScore, infile, doRevComp );
     }
     else if ( isResume )
     {
@@ -142,7 +136,7 @@ Index::Index( int argc, char** argv )
     cout << "Total time taken: " << getDuration( preprocessStartTime ) << endl;
 }
 
-void Index::newTransform( PreprocessFiles* fns, int minScore, ifstream &infile )
+void Index::newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, bool revComp )
 {
     uint8_t fileCount = 0, pairedLibCount = 0;
     
@@ -202,20 +196,15 @@ void Index::newTransform( PreprocessFiles* fns, int minScore, ifstream &infile )
             lineNum++;
         }
         
-        if ( !pairedLibCount )
-        {
-            cerr << "Error: no paired read libraries provided" << endl;
-            exit( EXIT_FAILURE );
-        }
-        else if ( pairedLibCount > 5 )
+        if ( pairedLibCount > 5 )
         {
             cerr << "Error: Excessive library count of " << pairedLibCount << ". Maximum supported is 5." << endl;
             exit( EXIT_FAILURE );
         }
         
         cout << "Preprocessing step 1 of 3: reading input files..." << endl << endl;
-        Transform::load( fns, libs, pairedLibCount );
-        Transform::run( fns );
+        Transform::load( fns, libs, pairedLibCount, revComp );
+        Transform::run( fns, revComp );
     }
     else
     {
@@ -227,12 +216,12 @@ void Index::newTransform( PreprocessFiles* fns, int minScore, ifstream &infile )
 void Index::resumeTransform( PreprocessFiles* fns )
 {
     cout << "Resuming preprocessing..." << endl << endl;
-    Transform::run( fns );
+    Transform::run( fns, false );
 }
 
 void Index::printUsage()
 {
-    cout << endl << "LeanBwt version " << LEANBWT_VERSION << endl;
+    cout << endl << "LeanBWT version " << LEANBWT_VERSION << endl;
     cout << endl << "Command:" << endl;
     cout << "\tindex" << endl;
     cout << endl << "Synopsis:" << endl;

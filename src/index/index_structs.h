@@ -26,6 +26,7 @@
 struct CharCount
 {
     void clear();
+    void cull();
     int getBranchCount();
     int getMaxBranch();
     CharId& operator[]( uint8_t i ){ return counts[i]; };

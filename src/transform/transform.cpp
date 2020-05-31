@@ -25,8 +25,10 @@
 #include <string.h>
 #include <cassert>
 #include <algorithm>
+//#include <chrono>
+//#include <iomanip>
 
-void Transform::load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, uint8_t pairedLibCount )
+void Transform::load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, uint8_t pairedLibCount, bool revComp )
 {
     sort( libs.begin(), libs.end(), []( vector<ReadFile*> &a, vector<ReadFile*> &b ){
         return a.size() > b.size();
@@ -51,8 +53,9 @@ void Transform::load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, u
     ReadId readCount = 0, discardCount = 0;
     uint8_t fileCount = 0;
     double readStartTime = clock();
+//    auto t_start = std::chrono::high_resolution_clock::now();
     
-    BinaryWriter* binWrite = new BinaryWriter( fns, pairedLibCount, readLen );
+    BinaryWriter* binWrite = new BinaryWriter( fns, pairedLibCount, readLen, revComp );
     
     // Write binary sequence file and first transform cycle
     while ( !libs.empty() )
@@ -138,17 +141,20 @@ void Transform::load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, u
     cout << "Summary:" << endl;
     cout << "Read in " << to_string( readCount ) << " sequence reads and discarded " << to_string( discardCount ) << endl;
     cout << "Read from " << to_string( fileCount ) << " read files, including " << to_string( pairedLibCount ) << " paired libraries." << endl;
-    cout << "Time taken: " << getDuration( readStartTime ) << endl << endl;
+    cout << "Time taken: " << getDuration( readStartTime );
+//    cout << "   " << std::fixed << std::setprecision(2) << ( clock() - readStartTime ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << endl << endl;
+    cout << endl << endl;
     delete binWrite;
 }
 
-void Transform::run( PreprocessFiles* fns )
+void Transform::run( PreprocessFiles* fns, bool revComp )
 {
     cout << "Preprocessing step 2 of 3: transforming sequence data..." << endl << endl;
     
-    BinaryReader* bin = new BinaryReader( fns );
+    BinaryReader* bin = new BinaryReader( fns, revComp );
     BwtCycler* cycler = new BwtCycler( fns );
     double totalStart = clock();
+//    auto t_start = std::chrono::high_resolution_clock::now();
     
     while ( bin->cycle < bin->readLen )
     {
@@ -172,5 +178,7 @@ void Transform::run( PreprocessFiles* fns )
     delete cycler;
     
     cout << endl << "Transforming sequence data... completed!" << endl;
-    cout << "Time taken: " << getDuration( totalStart ) << endl << endl;
+    cout << "Time taken: " << getDuration( totalStart );
+//    cout << "   " << std::fixed << std::setprecision(2) << ( clock() - totalStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << endl << endl;
+    cout << endl << endl;
 }

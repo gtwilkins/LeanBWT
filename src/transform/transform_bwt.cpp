@@ -23,6 +23,8 @@
 #include <cassert>
 #include <string.h>
 #include <iostream>
+//#include <chrono>
+//#include <iomanip>
 
 BwtCycler::BwtCycler( PreprocessFiles* filenames )
 : fns( filenames )
@@ -428,20 +430,29 @@ void BwtCycler::run( uint8_t* inChars, uint8_t* inEnds, uint8_t cycle )
     fns->setCycler( inBwt, outBwt, inEnd, outEnd, outIns, outIds, cycle );
     chars = inChars;
     ends = inEnds;
+    
+    double cycleStart = clock();
+//    auto t_start = std::chrono::high_resolution_clock::now();
+
     prepIn();
     prepOut();
+    
     
     for ( int i ( 0 ); i < 4; i++ )
     {
         fns->setCyclerIter( inIns, inIds, cycle, i );
         prepIter();
+        cout << "  " << insLeft;
         runIter( i );
     }
+    cout << " |  " << bwtCount <<"  | ";
     
     assert( !bwtLeft );
     flush( cycle );
     fclose( inBwt );
     fclose( inEnd );
+    
+//    cout << std::fixed << std::setprecision(2) << " cycle: " << ( clock() - cycleStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << std::flush;
 }
 
 void BwtCycler::rewriteEnd( ReadId runLen )

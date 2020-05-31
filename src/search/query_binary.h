@@ -2,7 +2,7 @@
  * Copyright (C) 2017 Glen T. Wilkins <glen.t.wilkins@gmail.com>
  * Written by Glen T. Wilkins
  * 
- * This file is part of the LeanBWT software package <https://github.com/gtwilkins/LeanBWT>
+ * This file is part of the Locass software package <https://github.com/gtwilkins/Locass>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,24 +18,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PREPROCESS_H
-#define PREPROCESS_H
+#ifndef QUERY_BINARY_H
+#define QUERY_BINARY_H
 
 #include "types.h"
-#include "transform.h"
-#include "index_writer.h"
+#include "filenames.h"
 
-class Index
+class QueryBinaries
 {
 public:
-    Index( int argc, char** argv );
+    QueryBinaries( Filenames* fns );
+    ~QueryBinaries(){};
+    vector<ReadId> getIds( CharId ranks, CharId counts );
+    string getSequence( ReadId id );
     
-    void newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, bool revComp );
-    void resumeTransform( PreprocessFiles* fns );
-    
-    void printUsage();
 private:
+    void decodeSequence( uint8_t* line, string &seq, uint8_t extLen, bool isRev, bool drxn );
+    void set();
+    
+    FILE* bin_,* ids_;
+    uint8_t binBegin_, idsBegin_, lineLen_;
+    
+    char decodeFwd[4][256];
+    char decodeRev[4][256];
 };
 
-#endif /* PREPROCESS_H */
+#endif /* QUERY_BINARY_H */
 

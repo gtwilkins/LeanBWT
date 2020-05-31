@@ -18,24 +18,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PREPROCESS_H
-#define PREPROCESS_H
+#ifndef MATCH_H
+#define MATCH_H
 
 #include "types.h"
-#include "transform.h"
-#include "index_writer.h"
+#include "index_reader.h"
+#include "query_binary.h"
 
-class Index
+class Match
 {
 public:
-    Index( int argc, char** argv );
+    Match( int argc, char** argv );
     
-    void newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, bool revComp );
-    void resumeTransform( PreprocessFiles* fns );
-    
-    void printUsage();
 private:
+    void match( string& seq, string& header, IndexReader* ir, QueryBinaries* qb, ofstream* ofs, int errors );
+    void printUsage();
+    void test( IndexReader* ir, QueryBinaries* qb, int tests, int errors );
 };
 
-#endif /* PREPROCESS_H */
+
+#endif /* MATCH_H */
 

@@ -18,24 +18,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PREPROCESS_H
-#define PREPROCESS_H
+#ifndef MATCH_QUERY_H
+#define MATCH_QUERY_H
 
 #include "types.h"
-#include "transform.h"
-#include "index_writer.h"
+#include "index_reader.h"
+#include "query_binary.h"
+#include "query_structs.h"
 
-class Index
+struct MatchRead
 {
-public:
-    Index( int argc, char** argv );
-    
-    void newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, bool revComp );
-    void resumeTransform( PreprocessFiles* fns );
-    
-    void printUsage();
-private:
+    MatchRead( ReadId id ):id( id ){};
+    string seq;
+    ReadId id;
+    int coord[2];
 };
 
-#endif /* PREPROCESS_H */
+class MatchQuery
+{
+    bool query( CharId rank, CharId count, uint8_t c, int i, int j, int len, int errLeft, int d );
+    void match( int errors );
+    
+    IndexReader* ir_;
+    vector<uint8_t> q_[2];
+    vector<int> blocks_[2];
+    vector<QueryHit> hits_[2];
+    int len_;
+    
+public:
+    MatchQuery( string seq, IndexReader* ir, int errors );
+    vector<MatchRead> yield( QueryBinaries* qb );
+};
+
+#endif /* MATCH_QUERY_H */
 
