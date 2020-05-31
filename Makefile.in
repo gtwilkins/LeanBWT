@@ -8,6 +8,7 @@ SRCS =  \
 	index_reader.cpp \
 	index_structs.cpp \
 	index_writer.cpp \
+	parameters.cpp \
 	timer.cpp \
 	transform.cpp \
 	transform_bwt.cpp \

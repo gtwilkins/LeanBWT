@@ -29,23 +29,25 @@
 
 struct BinaryReader
 {
-    BinaryReader( PreprocessFiles* filenames );
+    BinaryReader( PreprocessFiles* filenames, bool revComp );
     ~BinaryReader();
     
     void finish();
+    void init();
     void read();
     void update();
+    void test();
     
     PreprocessFiles* fns;
-    FILE* bin;
+    FILE* bin,* chr;
     
     uint8_t* chars,* buff,* ends;
     
     CharId id;
     uint8_t endBitArray[8];
     
-    uint8_t seqsBegin, lineLen, cycle, readLen;
-    CharId buffSize, fileSize;
+    uint8_t seqsBegin, lineLen, cycle, readLen, revComp;
+    CharId buffSize, fileSize, charSize;
     CharId endCount, prevEndCount;
     ReadId seqCount;
     bool anyEnds;
@@ -53,7 +55,7 @@ struct BinaryReader
 
 struct BinaryWriter
 {
-    BinaryWriter( PreprocessFiles* filenames, uint8_t inLibCount, uint8_t inReadLen );
+    BinaryWriter( PreprocessFiles* filenames, uint8_t inLibCount, uint8_t inReadLen, bool revComp );
     ~BinaryWriter();
     
     void close();
@@ -68,7 +70,7 @@ struct BinaryWriter
     
     // File pointers
     PreprocessFiles* fns;
-    FILE* bin,* bwt,* ends,* ins[4],* ids[4][4];
+    FILE* bin,* bwt,* ends,* ins[4],* ids[4][5];
     
     // Buffers
     uint8_t* binBuff;
@@ -78,12 +80,13 @@ struct BinaryWriter
     CharId pBin, pIds[4][4];
     uint8_t iBwt[4];
     
+    vector<ReadId> charPlaceCounts[4][4];
     CharId id;
     CharId buffSize;
     CharId charCounts[5];
     ReadId idsCounts[4][4];
     ReadId seqCount,* libCounts;
-    uint8_t lineLen, readLen, currLib, libCount, seqsBegin, cycle;
+    uint8_t lineLen, readLen, currLib, libCount, seqsBegin, cycle, revComp;
 };
 
 

@@ -30,7 +30,7 @@ class Index
 public:
     Index( int argc, char** argv );
     
-    void newTransform( PreprocessFiles* fns, int minScore, ifstream &infile );
+    void newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, bool revComp );
     void resumeTransform( PreprocessFiles* fns );
     
     void printUsage();

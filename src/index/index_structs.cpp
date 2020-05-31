@@ -19,11 +19,20 @@
  */
 
 #include "index_structs.h"
+#include <algorithm>
 
 void CharCount::clear()
 {
     counts[0] = counts[1] = counts[2] = counts[3] = 0;
     endCounts = 0;
+}
+
+void CharCount::cull()
+{
+    CharId limit = counts[0];
+    for ( int i = 1; i < 4; i++ ) if ( counts[i] ) limit = max( limit, counts[i] );
+    CharId cutoff = min( (CharId)20, 1 + ( limit > 19 ) + ( limit / 40 ) );
+    for ( int i = 0; i < 4; i++ ) if ( counts[i] < cutoff ) counts[i] = 0;
 }
 
 int CharCount::getBranchCount()

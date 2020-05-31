@@ -111,8 +111,8 @@ void ReadFile::setReadLen()
         cerr << "Error: Read length of " << seq.length() << " detected. Minimum length of 80 is supported." << endl;
         exit( EXIT_FAILURE );
     }
-    fh.seekg( curr );
     fh.clear();
+    fh.seekg( curr );
 }
 
 void ReadFile::trimSeq( string &seq )
