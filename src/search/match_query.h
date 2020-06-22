@@ -25,6 +25,7 @@
 #include "index_reader.h"
 #include "query_binary.h"
 #include "query_structs.h"
+#include "shared_structs.h"
 
 struct MatchRead
 {
@@ -47,7 +48,8 @@ class MatchQuery
     
 public:
     MatchQuery( string seq, IndexReader* ir, int errors );
-    vector<MatchRead> yield( QueryBinaries* qb );
+//    vector<MatchRead> yield( QueryBinaries* qb );
+    vector<Read> yield( QueryBinaries* qb );
 };
 
 #endif /* MATCH_QUERY_H */

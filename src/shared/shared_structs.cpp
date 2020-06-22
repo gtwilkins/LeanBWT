@@ -18,24 +18,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MATCH_H
-#define MATCH_H
+#include "shared_structs.h"
+#include <algorithm>
 
-#include "types.h"
-#include "index_reader.h"
-#include "query_binary.h"
-
-class Match
+Read::Read( std::string seq, ReadId id, int i, int j )
+: seq_( seq ), id_( id ), coords_( Coords( i, j ) )
 {
-public:
-    Match( int argc, char** argv );
     
-private:
-    void match( string& q, string& header, IndexReader* ir, QueryBinaries* qb, ofstream* ofs, int errors );
-    void printUsage();
-    void test( IndexReader* ir, QueryBinaries* qb, int tests, int errors );
-};
+}
 
-
-#endif /* MATCH_H */
-
+void Read::sort( vector<Read>& reads, bool ascending, bool coordDrxn )
+{
+    if ( ascending ) std::sort( reads.begin(), reads.end(), [&]( Read& a, Read& b ){ return a.coords_[coordDrxn] < b.coords_[coordDrxn]; } );
+    else std::sort( reads.begin(), reads.end(), [&]( Read& a, Read& b ){ return a.coords_[coordDrxn] > b.coords_[coordDrxn]; } );
+}

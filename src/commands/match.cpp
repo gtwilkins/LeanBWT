@@ -23,6 +23,7 @@
 #include "match_query.h"
 #include "parameters.h"
 #include "timer.h"
+#include "shared_functions.h"
 #include <iostream>
 #include <string.h>
 #include <unistd.h>
@@ -84,7 +85,7 @@ Match::Match( int argc, char** argv )
             
             fns = new Filenames( prefix );
         }
-        else if ( !strcmp( argv[i], "-m" ) )
+        else if ( !strcmp( argv[i], "-e" ) )
         {
             errors = stoi( argv[++i] );
             if ( errors > 15 || errors < 0 )
@@ -99,11 +100,9 @@ Match::Match( int argc, char** argv )
     IndexReader* ir = new IndexReader( fns );
     QueryBinaries* qb = new QueryBinaries( fns );
     
-    for ( int i = 0; i < 20; i++ ) test( ir, qb, 2, i );
-    assert( false );
+    if ( ofn.empty() ) ofn = "./match_result.fa";
     
-    ofstream ofs;
-    if ( !ofn.empty() ) ofs.open( ofn );
+    ofstream ofs( ofn );
     
     if ( !ifn.empty() )
     {
@@ -113,20 +112,57 @@ Match::Match( int argc, char** argv )
     {
         string header = "query";
         match( seq, header, ir, qb, ofs.good() ? &ofs : NULL, min( 15, errors ) );
-        assert( false );
+        if ( ofs.good() ) ofs.close();
     }
-    else assert( false );
+    else
+    {
+        cerr << "Error: no query sequence(s) provided." << endl;
+        exit( EXIT_FAILURE );
+    }
 }
 
-void Match::match( string& seq, string& header, IndexReader* ir, QueryBinaries* qb, ofstream* ofs, int errors )
+void Match::match( string& q, string& header, IndexReader* ir, QueryBinaries* qb, ofstream* ofs, int errors )
 {
-    vector<MatchRead> reads = MatchQuery( seq, ir, errors ).yield( qb );
-    sort( reads.begin(), reads.end(), []( MatchRead& a, MatchRead& b ){ return a.coord[0] < b.coord[0]; } );
-    int base = !reads.empty() ? max( -reads[0].coord[0], 0 ) : 0;
-    cout << ">" << header << "|matched:" << reads.size() << endl;
-    cout << string( base, '-' ) << seq << endl;
-    for ( MatchRead& mr : reads ) cout << ">read_" << mr.id << endl << string( mr.coord[0]+base, '-' ) << mr.seq << endl;
-    assert( false );
+    vector<Read> reads = MatchQuery( q, ir, errors ).yield( qb );
+    Read::sort( reads, true, 0 );
+    int base = !reads.empty() ? max( -reads[0].coords_[0], 0 ) : 0;
+    if ( ofs ) ( *ofs ) << ">" << header << "|matched:" << reads.size() << endl << string( base, '-' ) << "reads" << q << endl;
+    else cout << ">" << header << "|matched:" << reads.size() << endl << string( base, '-' ) << "reads" << q << endl;
+    Lib* lib;
+    unordered_set<ReadId> used;
+    bool addPairs = false;
+    for ( Read& r : reads ) if ( used.find( r.id_ ) == used.end() )
+    {
+        string header = ">read_" + to_string( r.id_ );
+        string seq = r.seq_;
+        int d, coord = r.coords_[0]+base;
+        if ( addPairs )
+        {
+            lib = params.getLib( r.id_ );
+            if ( lib && lib->isPe )
+            {
+                ReadId id = r.id_;
+                lib->getPair( id, d );
+                string alt = qb->getSequence( id );
+                int ol = mapSeqOverlap( seq, alt, 15, d );
+                if ( ol )
+                {
+                    if ( !d ) coord -= alt.size()-ol;
+                    seq = (d?seq:alt) + (d?alt:seq).substr( ol );
+                }
+                else
+                {
+                    seq = (d?seq:alt) + string( 100, '-' ) + (d?alt:seq);
+                    if ( !d ) coord -= 250;
+                }
+                used.insert( id );
+            }
+        }
+        assert( coord >= 0 );
+        seq = string( coord, '-' ) + seq;
+        if ( ofs ) ( *ofs ) << header << endl << seq << endl;
+        else cout << header << endl << seq << endl;
+    }
 }
 
 void Match::test( IndexReader* ir, QueryBinaries* qb, int tests, int errors )
@@ -148,5 +184,18 @@ void Match::test( IndexReader* ir, QueryBinaries* qb, int tests, int errors )
 
 void Match::printUsage()
 {
-    
+    cout << endl << "LeanBWT version " << LEANBWT_VERSION << endl;
+    cout << endl << "Command:" << endl;
+    cout << "    match" << endl;
+    cout << endl << "Synopsis:" << endl;
+    cout << "    Matches reads to one or more query sequences. By default, matches are exact. To find inexact matches, set an allowed mismatch rate (up to 15%)." << endl;
+    cout << endl << "Usage:" << endl;
+    cout << "    locass index [args]" << endl;
+    cout << endl << "Required arguments:" << endl;
+    cout << "    -p    Prefix for BWT data files." << endl;
+    cout << endl << "Optional arguments:" << endl;
+    cout << "    -o    Output file name (default: ./match_result.fa)." << endl;
+    cout << "    -i    Input sequence query file (mutually exclusive with -s)." << endl;
+    cout << "    -s    Input sequence query (mutually exclusive with -i)." << endl;
+    cout << "    -m    Allowed mismatches per 100 bases for inexact matching (default: 0, maximum: 15)." << endl;
 }

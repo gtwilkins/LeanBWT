@@ -85,17 +85,30 @@ void MatchQuery::match( int errors )
     }
 }
 
-vector<MatchRead> MatchQuery::yield( QueryBinaries* qb )
+//vector<MatchRead> MatchQuery::yield( QueryBinaries* qb )
+//{
+//    vector<MatchRead> reads;
+//    unordered_set<ReadId> used;
+//    for ( int d : { 0, 1 } ) for ( QueryHit& qh : hits_[d] ) for ( ReadId id : qb->getIds( qh.rank_, qh.count_ ) )
+//    {
+//        if ( !used.insert( id = ( d ? id : params.getRevId( id ) ) ).second ) continue;
+//        reads.push_back( MatchRead( id ) );
+//        reads.back().seq = qb->getSequence( id );
+//        reads.back().coord[0] = reads.back().coord[1] = qh.coord_;
+//        reads.back().coord[d] += ( d ? reads.back().seq.size() : -reads.back().seq.size() );
+//    }
+//    return reads;
+//}
+
+vector<Read> MatchQuery::yield( QueryBinaries* qb )
 {
-    vector<MatchRead> reads;
+    vector<Read> reads;
     unordered_set<ReadId> used;
     for ( int d : { 0, 1 } ) for ( QueryHit& qh : hits_[d] ) for ( ReadId id : qb->getIds( qh.rank_, qh.count_ ) )
     {
         if ( !used.insert( id = ( d ? id : params.getRevId( id ) ) ).second ) continue;
-        reads.push_back( MatchRead( id ) );
-        reads.back().seq = qb->getSequence( id );
-        reads.back().coord[0] = reads.back().coord[1] = qh.coord_;
-        reads.back().coord[d] += ( d ? reads.back().seq.size() : -reads.back().seq.size() );
+        reads.push_back( Read( qb ? qb->getSequence( id ) : "", id, qh.coord_, qh.coord_ ) );
+        reads.back().coords_[d] += ( d ? reads.back().seq_.size() : -reads.back().seq_.size() );
     }
     return reads;
 }

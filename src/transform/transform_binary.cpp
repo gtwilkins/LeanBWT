@@ -52,7 +52,7 @@ BinaryReader::BinaryReader( PreprocessFiles* filenames, bool revComp )
     }
     if ( !cycle && !seqCount )
     {
-        cout << "Error: cannot resume as no cycles have been previously completed" << endl;
+        cerr << "Error: cannot resume as no cycles have been previously completed" << endl;
         exit( EXIT_FAILURE );
     }
     if ( !cycle )
@@ -61,7 +61,7 @@ BinaryReader::BinaryReader( PreprocessFiles* filenames, bool revComp )
     }
     if ( cycle >= readLen + 1 )
     {
-        cout << "Error: transformation has already been completed." << endl;
+        cerr << "Error: transformation has already been completed." << endl;
         exit( EXIT_FAILURE );
     }
     chr = fns->getReadPointer( fns->tmpChr, false );
@@ -634,7 +634,7 @@ void BinaryWriter::dumpIds( uint8_t i, uint8_t j )
 void BinaryWriter::setNextLibrary()
 {
     assert( currLib < libCount );
-    ReadId thisCount = seqCount;
+    ReadId thisCount = revComp ? seqCount*2 : seqCount;
     for ( int i ( 0 ); i < currLib; i++ )
     {
         assert( libCount <= thisCount );

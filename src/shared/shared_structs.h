@@ -18,24 +18,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MATCH_H
-#define MATCH_H
+#ifndef SHARED_STRUCTS_H
+#define SHARED_STRUCTS_H
 
+#include <vector>
 #include "types.h"
-#include "index_reader.h"
-#include "query_binary.h"
 
-class Match
+struct Coords
 {
-public:
-    Match( int argc, char** argv );
-    
-private:
-    void match( string& q, string& header, IndexReader* ir, QueryBinaries* qb, ofstream* ofs, int errors );
-    void printUsage();
-    void test( IndexReader* ir, QueryBinaries* qb, int tests, int errors );
+    Coords( int32_t i, int32_t j ){ coords_[0] = i; coords_[1] = j; };
+    int32_t& operator[]( int i ){ return coords_[i]; };
+    int32_t coords_[2];
+};
+
+struct Read
+{
+    Read( string seq, ReadId id, int i, int j );
+    static void sort( vector<Read>& reads, bool ascending, bool coordDrxn );
+    string seq_;
+    ReadId id_;
+    Coords coords_;
 };
 
 
-#endif /* MATCH_H */
+#endif /* SHARED_STRUCTS_H */
 

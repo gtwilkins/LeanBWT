@@ -1,7 +1,7 @@
 # LeanBWT
 
 ## Overview
-LeanBWT is an application for the assembly memory-efficient Burrows-Wheeler Transform and FM-index construction.
+LeanBWT is an application for memory-efficient Burrows-Wheeler Transform and FM-index construction.
 
 ## Limitations
 LeanBWT is designed for use with short read sequence data, namely those produced by Illumina

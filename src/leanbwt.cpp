@@ -54,10 +54,10 @@ int main( int argc, char** argv )
         {
             Index( argc, argv );
         }
-//        else if ( !strcmp( argv[1], "match" ) )
-//        {
-//            Match( argc, argv );
-//        }
+        else if ( !strcmp( argv[1], "match" ) )
+        {
+            Match( argc, argv );
+        }
 //        else if ( !strcmp( argv[1], "overlap" ) )
 //        {
 //            Overlap( argc, argv );

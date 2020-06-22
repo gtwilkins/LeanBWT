@@ -16,6 +16,7 @@ SRCS =  \
 	query_binary.cpp \
 	query_structs.cpp \
 	shared_functions.cpp \
+	shared_structs.cpp \
 	timer.cpp \
 	transform.cpp \
 	transform_bwt.cpp \
