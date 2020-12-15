@@ -26,6 +26,37 @@
 #include "timer.h"
 #include "index_reader.h"
 
+IndexWriter::IndexWriter( Filenames* fns )
+: idx( NULL )
+{
+    assert( bwt = fns->getReadPointer( fns->bwt, false ) );
+    fread( &bwtBegin, 1, 1, bwt );
+    fread( &id, 8, 1, bwt );
+    fread( &bwtSize, 8, 1, bwt );
+    fread( &charCounts[4], 8, 1, bwt );
+    fread( &charCounts, 8, 4, bwt );
+    
+    contFlag = 1 << 7;
+    contMask = ~contFlag;
+//    indexSize = 1 + bwtSize / bwtPerIndex;
+//    markSize = 1 + ( charCounts[0] + charCounts[1] + charCounts[2] + charCounts[3] + charCounts[4] ) / countsPerMark;
+    
+    buff = new uint8_t[IDX_BUFFER];
+//    marks = new ReadId[ markSize ];
+    
+    currByte = 0;
+    memset( &counts, 0, 40 );
+    memset( &decodeBaseChar[0], 0, 63 );
+    memset( &decodeBaseChar[63], 1, 63 );
+    memset( &decodeBaseChar[126], 2, 63 );
+    memset( &decodeBaseChar[189], 3, 63 );
+    memset( &decodeBaseChar[252], 4, 4 );
+    memset( &maxBaseRun, 63, 4 );
+    maxBaseRun[4] = 4;
+    for ( int i ( 0 ); i < 4; i++ ) decodeBaseRun[ 252 + i ] = i + 1;
+    for ( int i ( 0 ); i < 4; i++ ) for ( int j ( 0 ); j < 63; j++ ) decodeBaseRun[ i * 63 + j ] = j + 1;
+}
+
 IndexWriter::IndexWriter( PreprocessFiles* fns, ReadId indexChunk, ReadId markChunk )
 : bwtPerIndex( indexChunk ), countsPerMark( markChunk )
 {
@@ -72,6 +103,61 @@ IndexWriter::~IndexWriter()
 {
     if ( buff ) delete[] buff;
     if ( marks ) delete[] marks;
+}
+
+void IndexWriter::test( Filenames* fns )
+{
+    IndexWriter iw( fns );
+    iw.testBwt();
+}
+
+void IndexWriter::testBwt()
+{
+    uint8_t currChar;
+    uint8_t currRunBytes = 0;
+    ReadId currChunkBytes = 0;
+    CharId currRank = 0;
+    CharId currRun, currAddRun;
+    bool startByte = true;
+    ReadId p = IDX_BUFFER - 1;
+    ReadId endCount = counts[4];
+    
+    CharId bwtLeft = bwtSize + 1;
+    while ( --bwtLeft )
+    {
+        if ( ++p == IDX_BUFFER )
+        {
+            fread( buff, 1, min( bwtLeft, IDX_BUFFER ), bwt );
+            p = 0;
+        }
+        
+        if ( startByte )
+        {
+            currChar = decodeBaseChar[ buff[p] ];
+            currRun = decodeBaseRun[ buff[p] ];
+            currRunBytes = 0;
+            currAddRun = 0;
+            startByte = currRun != maxBaseRun[currChar];
+        }
+        else
+        {
+            currAddRun ^= ( ( buff[p] & contMask ) << ( 7 * currRunBytes++ ) );
+            startByte = !( buff[p] & contFlag );
+        }
+        
+        if ( startByte )
+        {
+            currRun += currAddRun;
+            counts[currChar] += currRun;
+            currRank += currRun;
+        }
+    }
+    
+    cout << "A: " << counts[0] << endl;
+    cout << "C: " << counts[1] << endl;
+    cout << "G: " << counts[2] << endl;
+    cout << "T: " << counts[3] << endl;
+    cout << "$: " << counts[4] << endl;
 }
 
 void IndexWriter::writeIndex()

@@ -52,6 +52,12 @@ bool Lib::doAddMarker( bool thisRev, int &pairRev, bool drxn )
     return false;
 }
 
+int Lib::getDrxn( ReadId id )
+{
+    if ( !orientation ) return 2;
+    return orientation < 3 ? id & 0x1 : !( id & 0x1 );
+}
+
 int Lib::getPair( SeqNum &id )
 {
     uint8_t readVer = id & 0x3;

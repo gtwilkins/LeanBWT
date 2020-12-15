@@ -50,7 +50,7 @@ Overlap::Overlap( int argc, char** argv )
         }
         else if ( !strcmp( argv[i], "-o" ) )
         {
-            if ( !ifn.empty() )
+            if ( !ofn.empty() )
             {
                 cerr << "Error: multiple outputs provided." << endl;
                 exit( EXIT_FAILURE );
@@ -85,7 +85,7 @@ Overlap::Overlap( int argc, char** argv )
     IndexWriter( ppf, 128, 20000 );
     IndexReader* ir = new IndexReader( fns );
     
-    test( ir );
+//    test( ir );
 }
 
 void Overlap::test( IndexReader* ir )

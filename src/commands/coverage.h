@@ -18,22 +18,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRANSFORM_H
-#define TRANSFORM_H
+#ifndef COVERAGE_H
+#define COVERAGE_H
 
-#include "timer.h"
 #include "types.h"
-#include "transform_structs.h"
-#include "transform_binary.h"
-#include "transform_bwt.h"
+#include "index_reader.h"
+#include "query_binary.h"
+#include "shared_structs.h"
 
-class Transform 
+class Coverage
 {
-public:
-    static void load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, uint8_t pairedLibCount, bool revComp );
-    static void run( PreprocessFiles* fns );
+    bool confirm( Locus* locus, unordered_set<Node*>& pathed, vector<Node*>& nodes );
+    void cull( vector<Node*>& nodes );
+    vector<Node*> getNodes( vector<Read>& reads );
+    vector<Locus*> getSeeds( vector<Node*>& nodes );
+    void seed( string seq );
+    void printUsage();
+    IndexReader* ir_;
+    QueryBinaries* qb_;
+    vector<float> coverage_, covers_;
+    int queried_, unmatched_, nondiploid_, overtimed_, miscovered_, dissimilar_, short_, minLen_, testFail_;
     
+public:
+    Coverage( int argc, char** argv );
 };
 
-#endif /* TRANSFORM_H */
+#endif /* COVERAGE_H */
 

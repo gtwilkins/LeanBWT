@@ -29,10 +29,6 @@ QueryHit::QueryHit( ReadId rank, ReadId count, int coord, vector<QueryHit>& hits
 : QueryHit( rank, count, coord )
 {
     int i = 0, hit = -1;
-    if ( coord == 56 )
-    {
-        int x = 0;
-    }
     for ( ; i < hits.size() && hits[i].coord_ <= coord; i++ ) if ( coord == hits[i].coord_ )
     {
         if ( hits[i].rank_+hits[i].count_ < rank || rank+count < hits[i].rank_ ) continue;

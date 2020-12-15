@@ -20,21 +20,21 @@
 #include "overlap_query.h"
 #include "constants.h"
 
-OverlapQuery::OverlapQuery( string seq, IndexReader* ir, bool drxn, int len )
-: ir_( ir )
-{
-    vector<uint8_t> q;
-    for ( int i = 0; i < seq.size(); i++ ) q.push_back( drxn ? charToInt[ seq.end()[-i-1] ] : charToIntComp[ seq[i] ] );
-    
-    CharId rank, count;
-    ir->setBaseOverlap( q[0], q[1], rank, count );
-    query( rank, count, 1 );
-}
-
-void OverlapQuery::query( CharId rank, CharId count, int i )
-{
-    CharCount ranks, counts;
-    ir_->countRange( q_[i++], rank, count, ranks, counts );
-    for ( int j = 0; j < 4; j++ ) if ( i >= q_.size() || q_[i] > 3 || q_[i] == j ) query( ranks[j], counts[j], i );
-    if ( counts.endCounts && i >= cutoff_ ) hits_.push_back( QueryHit( ranks.endCounts, counts.endCounts, i ) );
-}
+//OverlapQuery::OverlapQuery( string seq, IndexReader* ir, bool drxn, int len )
+//: ir_( ir )
+//{
+//    vector<uint8_t> q;
+//    for ( int i = 0; i < seq.size(); i++ ) q.push_back( drxn ? charToInt[ seq.end()[-i-1] ] : charToIntComp[ seq[i] ] );
+//    
+//    CharId rank, count;
+//    ir->setBaseOverlap( q[0], q[1], rank, count );
+//    query( rank, count, 1 );
+//}
+//
+//void OverlapQuery::query( CharId rank, CharId count, int i )
+//{
+//    CharCount ranks, counts;
+//    ir_->countRange( q_[i++], rank, count, ranks, counts );
+//    for ( int j = 0; j < 4; j++ ) if ( i >= q_.size() || q_[i] > 3 || q_[i] == j ) query( ranks[j], counts[j], i );
+//    if ( counts.endCounts && i >= cutoff_ ) hits_.push_back( QueryHit( ranks.endCounts, counts.endCounts, i ) );
+//}

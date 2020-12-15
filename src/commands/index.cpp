@@ -111,7 +111,7 @@ Index::Index( int argc, char** argv )
     if ( isResume && didInput )
     {
         cerr << "Error: resume (--resume) and input (-i) are mutually exclusive arguments." << endl;
-        cerr << "If you wish to resume (--resume), simply specify the output prefix (-o) previously used." << endl;
+        cerr << "If you wish to resume (--resume), simply specify the output prefix (-p) previously used." << endl;
         exit( EXIT_FAILURE );
     }
     else if ( didInput )
@@ -204,7 +204,7 @@ void Index::newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, 
         
         cout << "Preprocessing step 1 of 3: reading input files..." << endl << endl;
         Transform::load( fns, libs, pairedLibCount, revComp );
-        Transform::run( fns, revComp );
+        Transform::run( fns );
     }
     else
     {
@@ -216,7 +216,7 @@ void Index::newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, 
 void Index::resumeTransform( PreprocessFiles* fns )
 {
     cout << "Resuming preprocessing..." << endl << endl;
-    Transform::run( fns, false );
+    Transform::run( fns );
 }
 
 void Index::printUsage()

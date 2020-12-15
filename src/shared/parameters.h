@@ -26,6 +26,7 @@
 struct Lib {
     Lib() : size( 0 ), minDist( 0 ), maxDist( 0 ), orientation( 0 ), isPe( false ) {};
     bool doAddMarker( bool thisRev, int &pairRev, bool drxn );
+    int getDrxn( ReadId id );
     int getPair( ReadId &readId );
     bool getPair( ReadId &readId, int &pairDrxn );
     void setMinMax();

@@ -147,11 +147,11 @@ void Transform::load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, u
     delete binWrite;
 }
 
-void Transform::run( PreprocessFiles* fns, bool revComp )
+void Transform::run( PreprocessFiles* fns )
 {
     cout << "Preprocessing step 2 of 3: transforming sequence data..." << endl << endl;
     
-    BinaryReader* bin = new BinaryReader( fns, revComp );
+    BinaryReader* bin = new BinaryReader( fns );
     BwtCycler* cycler = new BwtCycler( fns );
     double totalStart = clock();
 //    auto t_start = std::chrono::high_resolution_clock::now();

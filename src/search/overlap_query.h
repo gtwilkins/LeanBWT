@@ -26,16 +26,16 @@
 #include "query_binary.h"
 #include "query_structs.h"
 
-struct OverlapQuery
-{
-    OverlapQuery( string seq, IndexReader* ir, bool drxn, int len=0 );
-    void query( CharId rank, CharId count, int i );
-    
-    IndexReader* ir_;
-    vector<uint8_t> q_;
-    vector<QueryHit> hits_;
-    int cutoff_;
-};
+//struct OverlapQuery
+//{
+//    OverlapQuery( string seq, IndexReader* ir, bool drxn, int len=0 );
+//    void query( CharId rank, CharId count, int i );
+//    
+//    IndexReader* ir_;
+//    vector<uint8_t> q_;
+//    vector<QueryHit> hits_;
+//    int cutoff_;
+//};
 
 #endif /* OVERLAP_QUERY_H */
 

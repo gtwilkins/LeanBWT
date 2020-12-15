@@ -24,18 +24,26 @@
 #include "parameters.h"
 #include "timer.h"
 #include "shared_functions.h"
+#include "query_flay.h"
+#include <ctime> 
 #include <iostream>
 #include <string.h>
 #include <unistd.h>
 #include <cassert>
 #include <algorithm>
+#include "query_overlap.h"
+#include <sys/stat.h>
+#include <chrono>
+#include <iomanip>
 
 extern Parameters params;
 
 Match::Match( int argc, char** argv )
+:ir_( NULL ), qb_( NULL )
 {
-    string ifn, ofn, seq;
+    string ifn, ofn, header, seq;
     int errors = 0;
+    bool collapse = false, mismatches = false;
     Filenames* fns = NULL;
     
     for ( int i ( 2 ); i < argc; i++ )
@@ -56,7 +64,7 @@ Match::Match( int argc, char** argv )
         }
         else if ( !strcmp( argv[i], "-o" ) )
         {
-            if ( !ifn.empty() )
+            if ( !ofn.empty() )
             {
                 cerr << "Error: multiple outputs provided." << endl;
                 exit( EXIT_FAILURE );
@@ -95,23 +103,29 @@ Match::Match( int argc, char** argv )
             }
         }
         else if ( !strcmp( argv[i], "-s" ) ) seq = argv[++i];
+        else if ( !strcmp( argv[i], "--mismatches" ) ) mismatches = true;
+        else if ( !strcmp( argv[i], "--collapse" ) ) collapse = true;
     }
     
-    IndexReader* ir = new IndexReader( fns );
-    QueryBinaries* qb = new QueryBinaries( fns );
+    ir_ = new IndexReader( fns );
+    qb_ = new QueryBinaries( fns );
     
     if ( ofn.empty() ) ofn = "./match_result.fa";
     
-    ofstream ofs( ofn );
-    
     if ( !ifn.empty() )
     {
-        assert( false );
+        ifstream ifs( ifn );
+        vector<MatchedQuery> queries;
+        while ( getSeq( ifs, header, seq ) ) queries.push_back( MatchedQuery( header, seq, ir_, qb_, errors ) );
+        MatchedQuery::compete( queries );
+        output( ofn, queries, true, true );
     }
     else if ( !seq.empty() )
     {
-        string header = "query";
-        match( seq, header, ir, qb, ofs.good() ? &ofs : NULL, min( 15, errors ) );
+    
+        ofstream ofs( ofn );
+        header = "query";
+        match( seq, header, ofs.good() ? &ofs : NULL, min( 15, errors ) );
         if ( ofs.good() ) ofs.close();
     }
     else
@@ -121,9 +135,9 @@ Match::Match( int argc, char** argv )
     }
 }
 
-void Match::match( string& q, string& header, IndexReader* ir, QueryBinaries* qb, ofstream* ofs, int errors )
+void Match::match( string& q, string& header, ofstream* ofs, int errors )
 {
-    vector<Read> reads = MatchQuery( q, ir, errors ).yield( qb );
+    vector<Read> reads = MatchQuery( q, ir_, errors ).yield( qb_ );
     Read::sort( reads, true, 0 );
     int base = !reads.empty() ? max( -reads[0].coords_[0], 0 ) : 0;
     if ( ofs ) ( *ofs ) << ">" << header << "|matched:" << reads.size() << endl << string( base, '-' ) << "reads" << q << endl;
@@ -143,7 +157,7 @@ void Match::match( string& q, string& header, IndexReader* ir, QueryBinaries* qb
             {
                 ReadId id = r.id_;
                 lib->getPair( id, d );
-                string alt = qb->getSequence( id );
+                string alt = qb_->getSequence( id );
                 int ol = mapSeqOverlap( seq, alt, 15, d );
                 if ( ol )
                 {
@@ -165,7 +179,28 @@ void Match::match( string& q, string& header, IndexReader* ir, QueryBinaries* qb
     }
 }
 
-void Match::test( IndexReader* ir, QueryBinaries* qb, int tests, int errors )
+void Match::output( string ofn, vector<MatchedQuery>& queries, bool exact, bool inexact )
+{
+//    cout << qb_->getSequence( params.getPairId( 412471047 ) ) << endl;
+//    cout << qb_->getSequence( params.getPairId( 363246155 ) ) << endl;
+//    cout << qb_->getSequence( params.getPairId( 544448819 ) ) << endl;
+//    cout << qb_->getSequence( params.getPairId( 630967791 ) ) << endl;
+    ofstream ofs( ofn );
+    unordered_set<ReadId> used;
+    for ( MatchedQuery& mq : queries )
+    {
+        ofs << ">" + mq.header_ << "\n" << string( params.readLen, '-' ) << mq.seq_ << "\n";
+        if ( exact ) for ( Read& r : mq.exact_ ) if ( used.insert( r.id_ ).second ) ofs << ">Exact_match_" << r.id_ << "\n" << string( max( 0, r.coords_[0]+params.readLen ), '-' ) << r.seq_ << "\n";
+        if ( inexact ) for ( MatchRead& r : mq.inexact_ ) if ( used.insert( r.id_ ).second ) ofs << ">Inexact_match_" << r.id_ << "\n" << string( max( 0, r.query_[0]-r.read_[0]+params.readLen ), '-' ) << r.seq_ << "\n";
+        if ( inexact ) for ( Read& r : mq.unmatched_ ) if ( used.insert( r.id_ ).second ) ofs << ">Inexact_match_" << r.id_ << "\n" << string( max( 0, r.coords_[0]+params.readLen ), '-' ) << r.seq_ << "\n";
+//        if ( exact ) for ( Read& r : mq.exact_ ) cout << "Exact_match_" << r.id_ << "\n" << string( max( 0, r.coords_[0]+params.readLen ), '-' ) << mq.seq_ << "\n";
+//        if ( inexact ) for ( MatchRead& r : mq.inexact_ ) cout << "Inexact_match_" << r.id_ << "\n" << string( max( 0, r.query_[0]-r.read_[0]+params.readLen ), '-' ) << mq.seq_ << "\n";
+//        if ( inexact ) for ( Read& r : mq.unmatched_ ) cout << "Inexact_match_" << r.id_ << "\n" << string( max( 0, r.coords_[0]+params.readLen ), '-' ) << mq.seq_ << "\n";
+    }
+    ofs.close();
+}
+
+void Match::test( int tests, int errors )
 {
     srand( time(NULL) );
     vector<MatchQuery> matches;
@@ -173,12 +208,12 @@ void Match::test( IndexReader* ir, QueryBinaries* qb, int tests, int errors )
     while ( queries.size() < tests )
     {
         ReadId id = ( ( rand() & 65535 ) << 16 | ( rand() & 65535 ) ) % params.seqCount;
-        string seq = qb->getSequence( id );
+        string seq = qb_->getSequence( id );
         if ( seq.size() == params.readLen ) queries.push_back( make_pair( id, seq ) );
     }
     
     double startTime = clock();
-    for ( int i = 0; i < queries.size(); i++ ) matches.push_back( MatchQuery( queries[i].second, ir, errors ) );
+    for ( int i = 0; i < queries.size(); i++ ) matches.push_back( MatchQuery( queries[i].second, ir_, errors ) );
     cout << "Errors: " << errors << ", queryies: " << tests << ", time taken: " << getDuration( startTime ) << endl;
 }
 
@@ -197,5 +232,5 @@ void Match::printUsage()
     cout << "    -o    Output file name (default: ./match_result.fa)." << endl;
     cout << "    -i    Input sequence query file (mutually exclusive with -s)." << endl;
     cout << "    -s    Input sequence query (mutually exclusive with -i)." << endl;
-    cout << "    -m    Allowed mismatches per 100 bases for inexact matching (default: 0, maximum: 15)." << endl;
+    cout << "    -e    Allowed mismatches per 100 bases for inexact matching (default: 0, maximum: 15)." << endl;
 }

@@ -29,10 +29,10 @@
 
 struct MatchRead
 {
-    MatchRead( ReadId id ):id( id ){};
-    string seq;
-    ReadId id;
-    int coord[2];
+    MatchRead( ReadId id, string seq, Coords query, Coords read ): seq_( seq ), id_( id ), query_( query ), read_( read ){};
+    string seq_;
+    ReadId id_;
+    Coords query_, read_;
 };
 
 class MatchQuery
@@ -50,6 +50,16 @@ public:
     MatchQuery( string seq, IndexReader* ir, int errors );
 //    vector<MatchRead> yield( QueryBinaries* qb );
     vector<Read> yield( QueryBinaries* qb );
+    bool failure_;
+};
+
+struct MatchedQuery
+{
+    MatchedQuery( string header, string seq, IndexReader* ir, QueryBinaries* qb, int errors );
+    static void compete( vector<MatchedQuery>& queries );
+    string header_, seq_;
+    vector<Read> exact_, unmatched_;
+    vector<MatchRead> inexact_;
 };
 
 #endif /* MATCH_QUERY_H */

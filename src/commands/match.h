@@ -24,6 +24,8 @@
 #include "types.h"
 #include "index_reader.h"
 #include "query_binary.h"
+#include "match_query.h"
+#include "shared_structs.h"
 
 class Match
 {
@@ -31,9 +33,12 @@ public:
     Match( int argc, char** argv );
     
 private:
-    void match( string& q, string& header, IndexReader* ir, QueryBinaries* qb, ofstream* ofs, int errors );
+    void match( string& q, string& header, ofstream* ofs, int errors );
+    void output( string ofn, vector<MatchedQuery>& queries, bool exact, bool inexact );
     void printUsage();
-    void test( IndexReader* ir, QueryBinaries* qb, int tests, int errors );
+    void test( int tests, int errors );
+    IndexReader* ir_;
+    QueryBinaries* qb_;
 };
 
 

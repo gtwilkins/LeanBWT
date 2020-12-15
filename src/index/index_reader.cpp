@@ -249,10 +249,14 @@ void IndexReader::setBaseAll( uint8_t i, uint8_t j, CharId &rank, CharId &edge, 
     count = baseCounts[ i + 1 ][j] - edge - rank;
 }
 
-void IndexReader::setBaseMap( uint8_t i, uint8_t j, CharId &rank, CharId &count )
+ReadId IndexReader::setBaseMap( uint8_t i, uint8_t j, CharId &rank, CharId &count )
 {
+    ReadId base = 0;
+    for ( int ii = 0; ii < i; ii++ ) base += baseCounts[0][ii];
+    for ( int jj = 0; jj < j; jj++ ) base += midRanks[i][jj] - baseCounts[i][jj];
     rank = baseCounts[i][j];
     count = midRanks[i][j] - rank;
+    return base;
 }
 
 void IndexReader::setBaseOverlap( uint8_t i, uint8_t j, CharId &rank, CharId &count )
