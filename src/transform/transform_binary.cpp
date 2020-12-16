@@ -26,8 +26,8 @@
 //#include <chrono>
 //#include <iomanip>
 
-BinaryReader::BinaryReader( PreprocessFiles* filenames, bool revComp )
-: fns( filenames ), revComp( revComp )
+BinaryReader::BinaryReader( PreprocessFiles* filenames )
+: fns( filenames )
 {
     endCount = 0;
     bin = fns->getReadPointer( fns->bin, false );
@@ -325,62 +325,6 @@ void BinaryReader::read()
 //    cout << std::fixed << std::setprecision(2) << " read: " << ( clock() - readStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << flush;
 }
 
-//void BinaryReader::read()
-//{
-//    prevEndCount = endCount;
-//    if ( ++cycle == readLen )
-//    {
-//        delete[] chars;
-//        chars = NULL;
-//        return;
-//    }
-//    if ( cycle == 2 ) return;
-//    
-//    anyEnds = false;
-//    memset( chars, 0, ( seqCount + 3 ) / 4 );
-//    if ( ends ) memset( ends, 0, ( seqCount + 15 ) / 16 );
-//    
-//    fseek( bin, seqsBegin, SEEK_SET );
-//    CharId readsLeft = seqCount / ( 1 + revComp ), fileLeft = fileSize;
-//    CharId pBuff = buffSize, pChar = 0, pFwd, pRev = 1 + cycle / 4;
-//    ReadId readCount = 0;
-//    uint8_t iChar = 0, iFwd, iRev = cycle & 0x3;
-//    
-//    double readStart = clock();
-//    auto t_start = std::chrono::high_resolution_clock::now();
-//    
-//    while ( readsLeft )
-//    {
-////        if ( pBuff == buffSize ) rebuffBin( bin, buff, buffSize, fileLeft, pBuff );
-//        if ( pBuff == buffSize )
-//        {
-//            CharId thisBuff = min( buffSize, fileLeft );
-//            fread( buff, 1, thisBuff, bin );
-//            fileLeft -= thisBuff;
-//            pBuff = 0;
-//        }
-////        if ( !iChar ) chars[pChar] = 0;
-//        if ( buff[pBuff] == cycle )
-//        {
-//            if ( !ends ) ends = new uint8_t[ ( seqCount + 15 ) / 16 ]{0};
-//            ends[readCount/8] ^= endBitArray[readCount % 8];
-//            anyEnds = true;
-//            endCount++;
-//        }
-//        pFwd = 1 + ( buff[pBuff] - 1 - cycle ) / 4;
-//        iFwd = ( buff[pBuff] - 1 - cycle ) & 0x3;
-//        
-//        chars[pChar] += intToByte[iChar][ byteToInt[iFwd][ buff[ pBuff + pFwd ] ] ];
-//        if ( revComp ) chars[pChar] += intToByte[++iChar][ complement[ byteToInt[iRev][ buff[ pBuff + pRev ] ] ] ];
-//        iter( pChar, iChar );
-//        pBuff += lineLen;
-//        readsLeft--;
-//        readCount++;
-//    }
-//    
-//    cout << std::fixed << std::setprecision(2) << " read: " << ( clock() - readStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << flush;
-//}
-
 void BinaryReader::update()
 {
     FILE* fp = fns->getReadPointer( fns->bin, true );
@@ -477,31 +421,6 @@ void BinaryWriter::close()
         fseek( bin, 8, SEEK_CUR );
     }
     fclose( bin );
-     
-    // Set ids bucket limits
-    for ( int i = 0; i < 4; i++ )
-    {
-        for ( int j = 0; j < 4; j++ )
-        {
-            ReadId limit = 0;
-            for ( int k = 1; k < readLen; k++ ) limit = max( limit, charPlaceCounts[i][j][k] );
-            for ( int k = 1; k < readLen; k++ ) limit = max( limit, charPlaceCounts[3-j][3-i].end()[-k-1] );
-            for ( int k : { 0, 1 } )
-            {
-                FILE* fp = fns->getWritePointer( fns->tmpIds[k][i][j] );
-                fseek( fp, limit*4, SEEK_SET );
-                fwrite( &limit, 4, 1, fp );
-                fclose( fp );
-            }
-        }
-        for ( int k : { 0, 1 } )
-        {
-            ReadId dummy = 0;
-            FILE* fp = fns->getWritePointer( fns->tmpIds[k][i][4] );
-            fwrite( &dummy, 4, 1, fp );
-            fclose( fp );
-        }
-    }
     
     // Write counts to trim file
     FILE* trm = fns->getWritePointer( fns->tmpTrm );
@@ -559,36 +478,6 @@ void BinaryWriter::close()
     }
 }
 
-//void BinaryWriter::close()
-//{
-//    assert( libCount == currLib && cycle == 0 );
-//    
-//    // Clear remaining binary buffer
-//    dumpBin();
-//    fclose( bin );
-//    
-//    // Fill in missing binary variables
-//    bin = fns->getBinary( true, true );
-//    cycle = 1;
-//    fseek( bin, 10, SEEK_SET );
-//    fwrite( &cycle, 1, 1, bin );
-//    fseek( bin, 16, SEEK_SET );
-//    fwrite( &seqCount, 4, 1, bin );
-//    fseek( bin, 21, SEEK_SET );
-//    for ( int i ( 0 ); i < libCount; i++ )
-//    {
-//        fwrite( &libCounts[i], 4, 1, bin );
-//        fseek( bin, 8, SEEK_CUR );
-//    }
-//    fclose( bin );
-//    
-//    // Write BWT, POS and SAP, fill in counts for BWT, POS, SAP and IDS
-//    writeBwt();
-//    writeEnd();
-//    writeIns();
-//    writeIds();
-//}
-
 void BinaryWriter::dumpBin()
 {
     fwrite( binBuff, 1, pBin, bin );
@@ -644,48 +533,6 @@ void BinaryWriter::write( string &read )
     seqCount++;
     readLens[ line[0] ]++;
 }
-
-//void BinaryWriter::write( string &read )
-//{
-//    if ( pBin == buffSize ) dumpBin();
-//    
-//    // Check and write sequence length into one byte
-//    uint8_t seqLen = read.length();
-//    binBuff[pBin] = seqLen;
-//    if ( seqLen > readLen )
-//    {
-//        read = read.substr( 0, readLen );
-//        seqLen = readLen;
-////        cerr << "Error: Unexpectedly long read of length " << to_string( seqLen ) << " given set length of " << to_string( readLen ) << "." << endl;
-////        exit( EXIT_FAILURE );
-//    }
-//    
-//    // Encode characters into 2 bits per byte
-//    CharId p = pBin + 1;
-//    uint8_t i = 0;
-//    for ( uint8_t j ( 0 ); j < seqLen; j++ )
-//    {
-//        assert( read[j] != 'N' );
-//        write2Bit( binBuff, p, i, charToInt[ read[j] ] );
-//    }
-//    pBin += lineLen;
-//    
-//    // Get first and second characters from each end
-//    uint8_t c[4];
-//    c[0] = charToInt[ read[seqLen - 1] ];
-//    c[1] = charToInt[ read[seqLen - 2] ];
-//    c[2] = complement[ charToInt[ read[0] ] ];
-//    c[3] = complement[ charToInt[ read[1] ] ];
-//    
-//    // Write first cycle of BWT
-//    for ( int k = 0; k < 2 + revComp; k += 2 )
-//    {
-//        if ( pIds[ c[k] ][ c[k+1] ] == IDS_BUFFER ) dumpIds( c[k], c[k+1] );
-//        idsBuff[ c[k] ][ c[k+1] ][ pIds[ c[k] ][ c[k+1] ]++ ] = seqCount++;
-//        idsCounts[ c[k] ][ c[k+1] ]++;
-//        charCounts[ c[k] ]++;
-//    }
-//}
 
 void BinaryWriter::writeBwt()
 {

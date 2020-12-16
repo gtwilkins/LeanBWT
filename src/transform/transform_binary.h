@@ -29,7 +29,7 @@
 
 struct BinaryReader
 {
-    BinaryReader( PreprocessFiles* filenames, bool revComp );
+    BinaryReader( PreprocessFiles* filenames );
     ~BinaryReader();
     
     void finish();

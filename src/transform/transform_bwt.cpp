@@ -442,10 +442,8 @@ void BwtCycler::run( uint8_t* inChars, uint8_t* inEnds, uint8_t cycle )
     {
         fns->setCyclerIter( inIns, inIds, cycle, i );
         prepIter();
-        cout << "  " << insLeft;
         runIter( i );
     }
-    cout << " |  " << bwtCount <<"  | ";
     
     assert( !bwtLeft );
     flush( cycle );

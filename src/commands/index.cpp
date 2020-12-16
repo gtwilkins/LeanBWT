@@ -216,7 +216,7 @@ void Index::newTransform( PreprocessFiles* fns, int minScore, ifstream &infile, 
 void Index::resumeTransform( PreprocessFiles* fns )
 {
     cout << "Resuming preprocessing..." << endl << endl;
-    Transform::run( fns, false );
+    Transform::run( fns );
 }
 
 void Index::printUsage()
