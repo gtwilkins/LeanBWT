@@ -141,6 +141,7 @@ PreprocessFiles::PreprocessFiles( string inPrefix, bool overwrite )
 {
     tmpSingles = prefix + "-tmpSingles.seq";
     tmpChr = prefix + "-chr.dat";
+    tmpTrm = prefix + "-trm.dat";
     for ( int i( 0 ); i < 2; i++ )
     {
         tmpBwt[i] = prefix + "-bwt-tmp" + to_string( i + 1 );
@@ -169,6 +170,7 @@ void PreprocessFiles::clean()
 {
     removeFile( tmpSingles );
     removeFile( tmpChr );
+    removeFile( tmpTrm );
     for ( int i( 0 ); i < 2; i++ )
     {
         removeFile( tmpBwt[i] );

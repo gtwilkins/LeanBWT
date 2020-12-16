@@ -18,22 +18,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRANSFORM_H
-#define TRANSFORM_H
+#ifndef MATCH_H
+#define MATCH_H
 
-#include "timer.h"
 #include "types.h"
-#include "transform_structs.h"
-#include "transform_binary.h"
-#include "transform_bwt.h"
+#include "index_reader.h"
+#include "query_binary.h"
+#include "match_query.h"
+#include "shared_structs.h"
 
-class Transform 
+class Match
 {
 public:
-    static void load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, uint8_t pairedLibCount, bool revComp );
-    static void run( PreprocessFiles* fns );
+    Match( int argc, char** argv );
     
+private:
+    void match( string& q, string& header, ofstream* ofs, int errors );
+    void output( string ofn, vector<MatchedQuery>& queries, bool exact, bool inexact );
+    void printUsage();
+    void test( int tests, int errors );
+    IndexReader* ir_;
+    QueryBinaries* qb_;
 };
 
-#endif /* TRANSFORM_H */
+
+#endif /* MATCH_H */
 

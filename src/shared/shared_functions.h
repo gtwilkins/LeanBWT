@@ -22,11 +22,13 @@
 #define SHARED_FUNCTIONS_H
 
 #include "types.h"
+#include <fstream>
 
 char getComp( char c );
 int getEndTrim( string &q, string trim, bool drxn );
 int getHomopolymerLen( string &s, bool drxn );
 int getHomopolymerScore( string &s );
+bool getSeq( ifstream& ifs, string& header, string& seq );
 bool isSequence( string &s );
 bool mapSeq( string &q, string &t, int* coords, int minLen );
 int mapCongruence( string &left, string &right, int len );

@@ -35,6 +35,7 @@ BinaryReader::BinaryReader( PreprocessFiles* filenames, bool revComp )
     fread( &id, 8, 1, bin );
     fread( &readLen, 1, 1, bin );
     fread( &cycle, 1, 1, bin );
+    fread( &revComp, 1, 1, bin );
     fseek( bin, 16, SEEK_SET );
     fread( &seqCount, 4, 1, bin );
     
@@ -52,20 +53,28 @@ BinaryReader::BinaryReader( PreprocessFiles* filenames, bool revComp )
     }
     if ( !cycle && !seqCount )
     {
-        cout << "Error: cannot resume as no cycles have been previously completed" << endl;
+        cerr << "Error: cannot resume as no cycles have been previously completed" << endl;
         exit( EXIT_FAILURE );
     }
-    if ( !cycle )
+    
+    prep();
+    if ( cycle < 2 )
     {
         init();
     }
     if ( cycle >= readLen + 1 )
     {
-        cout << "Error: transformation has already been completed." << endl;
+        cerr << "Error: transformation has already been completed." << endl;
         exit( EXIT_FAILURE );
     }
     chr = fns->getReadPointer( fns->tmpChr, false );
-    if ( cycle > 3 ) assert( false );
+    trm = fns->getReadPointer( fns->tmpTrm, false );
+    
+    CharId trimSkip = trmBegin;
+    if ( cycle >= minTrim ) for ( int i = 0; i < ( cycle+1-minTrim ); i++ ) trimSkip += trimCounts[i]*4;
+    assert( !trimCounts.empty() || minTrim == readLen );
+    if ( !trimCounts.empty() ) fseek( trm, trimSkip, SEEK_SET );
+    if ( cycle > 2 ) fseek( chr, ( cycle-2 ) * charSize, SEEK_SET );
 }
 
 BinaryReader::~BinaryReader()
@@ -101,8 +110,8 @@ void BinaryReader::init()
     {
         ReadId blockSize = 8*1000, pChar = 0;
         CharId seeks[readLen];
-        uint8_t seq[readLen],* outs[readLen], base = readLen-1, nxt = readLen-3;
-        for ( uint8_t j = 0; j < readLen; j++ ) outs[j] = new uint8_t[blockSize];
+        uint8_t seq[readLen],* outs[readLen];
+        for ( uint8_t j = 0; j < readLen; j++ ) outs[j] = new uint8_t[blockSize]{0};
         for ( uint8_t j = 3; j < readLen; j++ ) seeks[j] = ( j-3 ) * charSize;
         
         chr = fns->getWritePointer( fns->tmpChr );
@@ -110,6 +119,21 @@ void BinaryReader::init()
         fwrite( line, 1, 1, chr );
         fclose( chr );
         chr = fns->getReadPointer( fns->tmpChr, true );
+        
+        // Prep trim file
+        int pTrim[readLen-minTrim]{0};
+        ReadId* bufTrim[readLen-minTrim], totalTrims = 0;
+        CharId fpTrims[readLen-minTrim];
+        for ( uint8_t j = 0; j+minTrim < readLen; j++ )
+        {
+            fpTrims[j] = j ? fpTrims[j-1] + ( trimCounts[j-1] * 4 ) : trmBegin;
+            bufTrim[j] = new ReadId[1000];
+            totalTrims += trimCounts[j];
+        }
+        
+        trm = fns->getReadPointer( fns->tmpTrm, true );
+        fseek( trm, CharId( totalTrims ) * 4 - 1 + trmBegin, SEEK_SET );
+        fwrite( line, 1, 1, trm );
 
         for ( ReadId id = 0; id < seqCount; id++ )
         {
@@ -122,6 +146,7 @@ void BinaryReader::init()
                     {
                         fseek( chr, seeks[j], SEEK_SET );
                         fwrite( outs[j], 1, p, chr );
+                        memset( outs[j], 0, p );
                         seeks[j] += p;
                     }
                     p = 0;
@@ -129,7 +154,25 @@ void BinaryReader::init()
                 i = 0;
             }
             fread( line, 1, lineLen, bin );
-            for ( uint8_t j = nxt; j < readLen; j++ ) seq[j] = byteToInt[ j&0x3 ][ line[1+j/4] ];
+            
+            if ( line[0] < readLen )
+            {
+                assert( line[0] >= minTrim );
+                uint8_t j = line[0] - minTrim;
+                
+                if ( pTrim[j] == 1000 )
+                {
+                    fseek( trm, fpTrims[j], SEEK_SET );
+                    fwrite( bufTrim[j], 4, pTrim[j], trm );
+                    fpTrims[j] += pTrim[j]*4;
+                    pTrim[j] = 0;
+                }
+                
+                bufTrim[j][ pTrim[j]++ ] = revComp ? ( id / 2 ) : id;
+            }
+            
+            uint8_t base = line[0]-1, nxt = line[0]-3;
+            for ( uint8_t j = nxt; j < line[0]; j++ ) seq[j] = byteToInt[ j&0x3 ][ line[1+j/4] ];
             for ( uint8_t j = 0; j < nxt; j++ )
             {
                 seq[j] = byteToInt[ j&0x3 ][ line[1+j/4] ];
@@ -146,7 +189,7 @@ void BinaryReader::init()
             if ( !revComp ) continue;
             
             ++id;
-            for ( uint8_t j = 3; j < readLen; j++ ) outs[j][p] |= intToByte[i][ 3-seq[j] ];
+            for ( uint8_t j = 3; j < line[0]; j++ ) outs[j][p] |= intToByte[i][ 3-seq[j] ];
             chars[pChar] |= intToByte[i++][ 3-seq[2] ];
             idsCounts[ 3-seq[0] ][ 3-seq[1] ]++;
             fwrite( &id, 4, 1, ids[ 3-seq[0] ][ 3-seq[1] ] );
@@ -159,9 +202,18 @@ void BinaryReader::init()
             seeks[j] += p;
         }
         
+        for ( uint8_t j = 0; j+minTrim < readLen; j++ ) if ( pTrim[j] )
+        {
+            fseek( trm, fpTrims[j], SEEK_SET );
+            fwrite( bufTrim[j], 4, pTrim[j], trm );
+            fpTrims[j] += pTrim[j]*4;
+        }
+        
         for ( uint8_t j = 0; j < readLen; j++ ) delete outs[j];
+        for ( uint8_t j = 0; j+minTrim < readLen; j++ ) delete bufTrim[j];
         
         fclose( chr );
+        fclose( trm );
     }
     
     for ( int i = 0; i < 4; i++ ) for ( int j = 0; j < 4; j++ )
@@ -225,46 +277,19 @@ void BinaryReader::init()
 //    cout << std::fixed << std::setprecision(2) << " read: " << ( clock() - readStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << endl;
 }
 
-//void BinaryReader::read()
-//{
-//    prevEndCount = endCount;
-//    if ( ++cycle == readLen )
-//    {
-//        delete[] chars;
-//        chars = NULL;
-//        return;
-//    }
-//    anyEnds = false;
-//    if ( cycle == 2 ) return;
-//    
-//    fseek( bin, seqsBegin, SEEK_SET );
-//    ReadId readCount = seqCount / ( 1 + revComp ), p = -1, i = 0, pFwd = 1 + ( readLen - 1 - cycle ) / 4, pRev = 1 + cycle / 4;
-//    uint8_t line[lineLen], c, iFwd = 1 + ( readLen - 1 - cycle ) / 4, iRev = cycle & 0x3;
-//    
-//    double readStart = clock();
-//    auto t_start = std::chrono::high_resolution_clock::now();
-//    
-//    while ( readCount-- )
-//    {
-//        fread( line, 1, lineLen, bin );
-//        c = byteToInt[ ( line[0] - 1 - cycle ) & 0x3 ][ line[ 1 + ( line[0] - 1 - cycle ) / 4 ] ];
-//        
-//        if ( !i ) chars[++p] = intToByte[0][ c ];
-//        else chars[p] += intToByte[i][ c ];
-//        if ( ++i == 4 ) i = 0;
-//        
-//        if ( revComp )
-//        {
-//            assert( false );
-//            c = complement[ byteToInt[iRev][ line[pRev] ] ];
-//            if ( !i ) chars[++p] = intToByte[0][ c ];
-//            else chars[p] += intToByte[i][ c ];
-//            if ( ++i == 4 ) i = 0;
-//        }
-//    }
-//    
-//    cout << std::fixed << std::setprecision(2) << " read: " << ( clock() - readStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << flush;
-//}
+void BinaryReader::prep()
+{
+    trm = fns->getReadPointer( fns->tmpTrm, true );
+    fread( &trmBegin, 2, 1, trm );
+    fread( &minTrim, 1, 1, trm );
+    ReadId inTrim;
+    for ( uint8_t j = 0; j+minTrim < readLen; j++ )
+    {
+        fread( &inTrim, 4, 1, trm );
+        trimCounts.push_back( inTrim );
+    }
+    fclose( trm );
+}
 
 void BinaryReader::read()
 {
@@ -280,8 +305,22 @@ void BinaryReader::read()
     double readStart = clock();
 //    auto t_start = std::chrono::high_resolution_clock::now();
     
-    anyEnds = false;
     fread( chars, 1, charSize, chr );
+    
+    if ( anyEnds = ( cycle >= minTrim ) )
+    {
+        unordered_set<ReadId> ids;
+        for( ReadId in : {110803679,112732249,90490184,97199286,25558601,152543493,155562156,136293585,152034118,55435202,106260666,50802570,95519741,4171125,56612370,121848256,9567765,139030520,112612339,72400370,122625440,35006278,139506091,10585004,143005037,145942559,151231624,159486086} ) ids.insert( in / 2 );
+        if ( !ends ) ends = new uint8_t[ ( seqCount + 15 ) / 16 ]{0};
+        int i = cycle - minTrim;
+        ReadId id;
+        for ( ReadId j = 0; j < trimCounts[i]; j++ )
+        {
+            fread( &id, 4, 1, trm );
+            ends[id/8] |= endBitArray[id % 8];
+            endCount++;
+        }
+    }
     
 //    cout << std::fixed << std::setprecision(2) << " read: " << ( clock() - readStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << flush;
 }
@@ -350,101 +389,8 @@ void BinaryReader::update()
     fclose( fp );
 }
 
-//void BinaryReader::test()
-//{
-//    fseek( bin, seqsBegin, SEEK_SET );
-//    
-//    string prefix = "/home/glen/Genomes/SpBwt/sp_block";
-//    vector<string> ffns;
-//    for ( int i = 0; i < 10; ) ffns.push_back( prefix + "-"+ to_string( ++i ) );
-//    
-//    double tStart = clock();
-//    auto t_start = chrono::high_resolution_clock::now();
-//    ifstream ifs( fns->bin, ios::binary );
-//    
-//    buffSize = 10*1000*lineLen;
-//    CharId fileLeft = fileSize, pBuff = buffSize;
-//    CharId counted = 0;
-//    CharId blockCount = 100000000;
-//    CharId blockSize = blockCount*lineLen;
-//    CharId blocks = 0;
-//    char* buf = new char[buffSize];
-//    
-////    while ( fileLeft )
-////    {
-////        double blockStart = clock();
-////        auto b_start = chrono::high_resolution_clock::now();
-//////        ofstream ofs( ffns[blocks++], ios::binary );
-////        FILE* ofp = fopen( ffns[blocks].c_str(), "wb" );
-////        fseek( ofp, min( fileLeft, blockSize )-1, SEEK_SET );
-////        fwrite( buf, 1, 1, ofp );
-////        fclose( ofp );
-////        ofp = fopen( ffns[blocks++].c_str(), "rb+" );
-////        
-////        for ( CharId j = blockSize/buffSize; fileLeft && j--; )
-////        {
-////            CharId thisBuff = min( buffSize, fileLeft );
-////            ifs.read( buf, thisBuff );
-////            fwrite( buf, 1, thisBuff, ofp );
-//////            ofs.write( buf, thisBuff );
-////            fileLeft -= thisBuff;
-////        }
-//////        ofs.close();
-////        fclose( ofp );
-////        cout << std::fixed << std::setprecision(2) << counted << " read: " << ( clock() - blockStart ) / CLOCKS_PER_SEC << " vs " << ( ( chrono::high_resolution_clock::now() - b_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << endl;
-////    }
-////    ifs.close();
-////    cout << std::fixed << std::setprecision(2) << counted << " read: " << ( clock() - tStart ) / CLOCKS_PER_SEC << " vs " << ( ( chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << endl;
-//    
-//    double iStart = clock();
-//    auto i_start = chrono::high_resolution_clock::now();
-//    
-//    fileLeft = fileSize;
-//    
-//    while ( fileLeft )
-//    {
-//        double blockStart = clock();
-//        auto b_start = chrono::high_resolution_clock::now();
-//        ifstream ifs( ffns[blocks++], ios::binary );
-//        
-//        for ( CharId j = blockSize/buffSize; fileLeft && j--; )
-//        {
-//            CharId thisBuff = min( buffSize, fileLeft );
-//            ifs.read( buf, thisBuff );
-//            fileLeft -= thisBuff;
-//        }
-//        ifs.close();
-//        cout << std::fixed << std::setprecision(2) << counted << " read: " << ( clock() - blockStart ) / CLOCKS_PER_SEC << " vs " << ( ( chrono::high_resolution_clock::now() - b_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << endl;
-//    }
-//    
-//    cout << std::fixed << std::setprecision(2) << counted << " read: " << ( clock() - iStart ) / CLOCKS_PER_SEC << " vs " << ( ( chrono::high_resolution_clock::now() - i_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << endl;
-//    
-////    for ( CharId i = seqCount; i--; )
-////    {
-////        if ( pBuff == buffSize )
-////        {
-////            CharId thisBuff = min( buffSize, fileLeft );
-////            ifs.read( buf, thisBuff );
-//////            fread( buff, 1, thisBuff, bin );
-////            fileLeft -= thisBuff;
-////            pBuff = 0;
-////        }
-////        
-////        if ( !( ++counted % 10000000 ) )
-////        {
-////            
-////            cout << std::fixed << std::setprecision(2) << counted << " read: " << ( clock() - readStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << endl;
-////        }
-////        
-////        pBuff += lineLen;
-////    }
-//////    
-////    cout << std::fixed << std::setprecision(2) << " read: " << ( clock() - readStart ) / CLOCKS_PER_SEC << " vs " << ( ( std::chrono::high_resolution_clock::now() - t_start ).count() / 1000.0 ) / CLOCKS_PER_SEC << " ... " << endl;
-//    exit( 1 );
-//}
-
 BinaryWriter::BinaryWriter( PreprocessFiles* filenames, uint8_t inLibCount, uint8_t inReadLen, bool revComp )
-: fns( filenames ), libCount( inLibCount ), readLen( inReadLen ), libCounts( NULL ), revComp( revComp )
+: fns( filenames ), libCount( inLibCount ), readLen( inReadLen ), readLens( inReadLen, 0 ), libCounts( NULL ), revComp( revComp )
 {
     pBin = 0;
     seqCount = 0;
@@ -468,18 +414,8 @@ BinaryWriter::BinaryWriter( PreprocessFiles* filenames, uint8_t inLibCount, uint
     seqsBegin = 21 + ( libCount * 12 );
     
     for ( int i = 0; i < 4; i++ ) for ( int j = 0; j < 4; j++ ) charPlaceCounts[i][j].resize( readLen, 0 );
-    // old
-//    for ( int i ( 0 ); i < 4; i++ )
-//    {
-//        for ( int j( 0 ); j < 4; j++ )
-//        {
-//            idsCounts[i][j] = pIds[i][j] = 0;
-//            idsBuff[i][j] = new ReadId[IDS_BUFFER];
-//            fwrite( &idsCounts[i][j], 4, 1, ids[i][j] );
-//        }
-//    }
     
-    uint8_t dummy8 = 0;
+    uint8_t dummy8 = 0, revCal = revComp ? 2 : 0;
     uint16_t dummy16 = 0;
     uint32_t dummy32 = 0;
     
@@ -487,7 +423,7 @@ BinaryWriter::BinaryWriter( PreprocessFiles* filenames, uint8_t inLibCount, uint
     fwrite( &id, 8, 1, bin );                    // ID number for this transform session
     fwrite( &readLen, 1, 1, bin );               // Read length
     fwrite( &cycle, 1, 1, bin );                 // Current cycles complete
-    fwrite( &dummy8, 1, 1, bin );                // Is calibrated
+    fwrite( &revCal, 1, 1, bin );                // Is calibrated
     fwrite( &dummy32, 4, 1, bin );               // Estimated coverage
     fwrite( &seqCount, 4, 1, bin );              // Sequence count for each library, total sequence count
     fwrite( &libCount, 1, 1, bin );              // Number of libraries
@@ -497,11 +433,6 @@ BinaryWriter::BinaryWriter( PreprocessFiles* filenames, uint8_t inLibCount, uint
         fwrite( &dummy16, 2, 3, bin );           // Library insert size estimates
         fwrite( &dummy8, 1, 2, bin );            // Library type details
     }
-//    fseek( bin, 6811999995-1, SEEK_SET );
-//    fwrite( &dummy8, 1, 1, bin );
-//    fclose( bin );
-//    bin = fopen( fns->bin.c_str(), "rb+" );
-//    fseek( bin, seqsBegin, SEEK_SET );
 }
 
 BinaryWriter::~BinaryWriter()
@@ -531,9 +462,12 @@ void BinaryWriter::close()
         for ( int i = 0; i < 4; i++ ) for ( int j = 0; j < 4; j++ ) for ( int k = 1; k < readLen; k++ ) revCounts[i][j][k] = charPlaceCounts[3-j][3-i][readLen-k];
         for ( int i = 0; i < 4; i++ ) for ( int j = 0; j < 4; j++ ) for ( int k = 1; k < readLen; k++ ) charPlaceCounts[i][j][k] += revCounts[i][j][k];
     }
-//    cycle = 0;
-//    fseek( bin, 10, SEEK_SET );
-//    fwrite( &cycle, 1, 1, bin );
+    
+    uint8_t dummy;
+    fseek( bin, seqsBegin, SEEK_SET );
+    fread( &dummy, 1, 1, bin );
+    assert( dummy );
+    
     fseek( bin, 16, SEEK_SET );
     fwrite( &seqCount, 4, 1, bin );
     fseek( bin, 21, SEEK_SET );
@@ -543,6 +477,42 @@ void BinaryWriter::close()
         fseek( bin, 8, SEEK_CUR );
     }
     fclose( bin );
+     
+    // Set ids bucket limits
+    for ( int i = 0; i < 4; i++ )
+    {
+        for ( int j = 0; j < 4; j++ )
+        {
+            ReadId limit = 0;
+            for ( int k = 1; k < readLen; k++ ) limit = max( limit, charPlaceCounts[i][j][k] );
+            for ( int k = 1; k < readLen; k++ ) limit = max( limit, charPlaceCounts[3-j][3-i].end()[-k-1] );
+            for ( int k : { 0, 1 } )
+            {
+                FILE* fp = fns->getWritePointer( fns->tmpIds[k][i][j] );
+                fseek( fp, limit*4, SEEK_SET );
+                fwrite( &limit, 4, 1, fp );
+                fclose( fp );
+            }
+        }
+        for ( int k : { 0, 1 } )
+        {
+            ReadId dummy = 0;
+            FILE* fp = fns->getWritePointer( fns->tmpIds[k][i][4] );
+            fwrite( &dummy, 4, 1, fp );
+            fclose( fp );
+        }
+    }
+    
+    // Write counts to trim file
+    FILE* trm = fns->getWritePointer( fns->tmpTrm );
+    uint8_t minReadLen = readLen;
+    for ( uint8_t i = 0; i < readLen; i++ ) if ( readLens[i] ) minReadLen = min( minReadLen, i );
+    assert( minReadLen );
+    uint16_t trimBegin = 3 + ( ( readLen-minReadLen ) * 4 );
+    fwrite( &trimBegin, 2, 1, trm );
+    fwrite( &minReadLen, 1, 1, trm );
+    for ( uint8_t i = minReadLen; i < readLen; i++ ) fwrite( &readLens[i], 4, 1, trm );
+    fclose( trm );
      
     // Set ids bucket limits
     for ( int i = 0; i < 4; i++ )
@@ -634,7 +604,7 @@ void BinaryWriter::dumpIds( uint8_t i, uint8_t j )
 void BinaryWriter::setNextLibrary()
 {
     assert( currLib < libCount );
-    ReadId thisCount = seqCount;
+    ReadId thisCount = revComp ? seqCount*2 : seqCount;
     for ( int i ( 0 ); i < currLib; i++ )
     {
         assert( libCount <= thisCount );
@@ -646,8 +616,6 @@ void BinaryWriter::setNextLibrary()
 
 void BinaryWriter::write( string &read )
 {
-//    if ( pBin == buffSize ) dumpBin();
-    
     // Check and write sequence length into one byte
     uint8_t line[lineLen];
     line[0] = read.length();
@@ -674,6 +642,7 @@ void BinaryWriter::write( string &read )
     }
     fwrite( line, 1, lineLen, bin );
     seqCount++;
+    readLens[ line[0] ]++;
 }
 
 //void BinaryWriter::write( string &read )

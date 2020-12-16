@@ -34,19 +34,22 @@ struct BinaryReader
     
     void finish();
     void init();
+    void prep();
     void read();
     void update();
     void test();
     
     PreprocessFiles* fns;
-    FILE* bin,* chr;
+    FILE* bin,* chr,* trm;
     
     uint8_t* chars,* buff,* ends;
+    vector<ReadId> trimCounts;
     
     CharId id;
     uint8_t endBitArray[8];
     
-    uint8_t seqsBegin, lineLen, cycle, readLen, revComp;
+    uint8_t seqsBegin, lineLen, cycle, readLen, revComp, minTrim;
+    uint16_t trmBegin;
     CharId buffSize, fileSize, charSize;
     CharId endCount, prevEndCount;
     ReadId seqCount;
@@ -80,7 +83,7 @@ struct BinaryWriter
     CharId pBin, pIds[4][4];
     uint8_t iBwt[4];
     
-    vector<ReadId> charPlaceCounts[4][4];
+    vector<ReadId> charPlaceCounts[4][4], readLens;
     CharId id;
     CharId buffSize;
     CharId charCounts[5];

@@ -18,22 +18,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRANSFORM_H
-#define TRANSFORM_H
 
-#include "timer.h"
-#include "types.h"
-#include "transform_structs.h"
-#include "transform_binary.h"
-#include "transform_bwt.h"
+#ifndef QUERY_OVERLAP_H
+#define QUERY_OVERLAP_H
 
-class Transform 
+#include "index_reader.h"
+#include "query_binary.h"
+#include "query_structs.h"
+#include "query_extension.h"
+
+class QueryOverlap
 {
+    QueryOverlap( string seq, IndexReader* ir, int minOl, bool drxn );
+    void query( CharId rank, CharId count, int i );
+    IndexReader* ir_;
+    vector<uint8_t> q_;
+    vector<QueryHit> hits_;
+    CharCount ranks_, counts_;
+    int minOl_;
 public:
-    static void load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, uint8_t pairedLibCount, bool revComp );
-    static void run( PreprocessFiles* fns );
-    
+    static ReadId countOverlaps( string seq, IndexReader* ir, int minOl, bool drxn );
+    static Exts* getExtensions( string seq, IndexReader* ir, QueryBinaries* qb, int minOl, bool drxn );
 };
 
-#endif /* TRANSFORM_H */
+#endif /* QUERY_OVERLAP_H */
 

@@ -96,6 +96,28 @@ int getHomopolymerScore( string &s )
     return score;
 }
 
+bool getSeq( ifstream& ifs, string& header, string& seq )
+{
+    string line;
+    if ( !getline( ifs, line ) || line.empty() ) return false;
+    if ( line[0] == '>' )
+    {
+        header = line.substr( 1 );
+        if ( !getline( ifs, seq ) || !isSequence( seq ) ) return false;
+    }
+    else if ( line[0] == '@' )
+    {
+        header = line.substr( 1 );
+        if ( !getline( ifs, seq ) || !isSequence( seq ) ) return false;
+        assert( getline( ifs, line ) && line[0] == '+' );
+        assert( getline( ifs, line ) && line.size() == seq.size() );
+    }
+    else if ( !isSequence( line ) ) return false;
+    else seq = line;
+    
+    return true;
+}
+
 bool isSequence( string &s )
 {
     for ( char c : s )  if ( !strchr( "ACGTN", c ) ) return false;

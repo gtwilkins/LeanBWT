@@ -18,22 +18,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRANSFORM_H
-#define TRANSFORM_H
+#ifndef LOCAL_ALIGNMENT_H
+#define LOCAL_ALIGNMENT_H
 
-#include "timer.h"
-#include "types.h"
-#include "transform_structs.h"
-#include "transform_binary.h"
-#include "transform_bwt.h"
+#include <vector>
+#include <string>
 
-class Transform 
+class LocalAlignment
 {
 public:
-    static void load( PreprocessFiles* fns, vector< vector<ReadFile*> >& libs, uint8_t pairedLibCount, bool revComp );
-    static void run( PreprocessFiles* fns );
+    LocalAlignment( std::string &a, std::string &b, bool glocal, bool freePolymer );
     
+    static int isGapPoly( std::string (&a)[2], int d, int i, int gap );
+    void print( int i, int j );
+    void realign( std::string &a, std::string &b, bool conform, bool bluntStart=false, bool bluntEnd=false, bool trimEnd=false );
+private:
+    void blunt( bool start, bool end );
+    int score( int i, int j, char &c, int* coords );
+    void setRuns( int* run, int i, int j );
+    
+    std::string a_, b_;
+    std::vector< std::vector<int> > m_;
+    bool freePolymer_;
 };
 
-#endif /* TRANSFORM_H */
+
+
+#endif /* LOCAL_ALIGNMENT_H */
 

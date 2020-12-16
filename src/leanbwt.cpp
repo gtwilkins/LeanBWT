@@ -22,8 +22,12 @@
 #include <cassert>
 #include <string.h>
 #include <iostream>
-#include "shared/types.h"
-#include "commands/index.h"
+#include "types.h"
+#include "index.h"
+#include "match.h"
+#include "overlap.h"
+#include "test.h"
+#include "coverage.h"
 #include "shared_functions.h"
 #include "parameters.h"
 
@@ -52,14 +56,22 @@ int main( int argc, char** argv )
         {
             Index( argc, argv );
         }
-//        else if ( !strcmp( argv[1], "match" ) )
-//        {
-//            Match( argc, argv );
-//        }
+        else if ( !strcmp( argv[1], "match" ) )
+        {
+            Match( argc, argv );
+        }
 //        else if ( !strcmp( argv[1], "overlap" ) )
 //        {
 //            Overlap( argc, argv );
 //        }
+//        else if ( !strcmp( argv[1], "coverage" ) )
+//        {
+//            Coverage( argc, argv );
+//        }
+        else if ( !strcmp( argv[1], "test" ) )
+        {
+            Test( argc, argv );
+        }
         else
         {
             cerr << "Unrecognised command: \"" << argv[1] << "\"" << endl << endl;

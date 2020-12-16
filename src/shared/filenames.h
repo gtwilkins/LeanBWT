@@ -64,6 +64,7 @@ struct PreprocessFiles : public Filenames
     void setMersWrite( FILE* &outMer );
     
     string tmpChr;
+    string tmpTrm;
     string tmpBwt[2];
     string tmpEnd[2];
     string tmpIns[2][4];

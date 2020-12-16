@@ -39,7 +39,7 @@ public:
     int setBaseAll( vector<uint8_t> &q, CharId &rank, CharId &count );
     void setBaseAll( uint8_t i, uint8_t j, CharId &rank, CharId &count );
     void setBaseAll( uint8_t i, uint8_t j, CharId &rank, CharId &edge, CharId &count );
-    void setBaseMap( uint8_t i, uint8_t j, CharId &rank, CharId &count );
+    ReadId setBaseMap( uint8_t i, uint8_t j, CharId &rank, CharId &count );
     void setBaseOverlap( uint8_t i, uint8_t j, CharId &rank, CharId &count );
     
 private:

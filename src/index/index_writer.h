@@ -31,8 +31,12 @@ class IndexWriter
 public:
     IndexWriter( PreprocessFiles* fns, ReadId indexChunk, ReadId markChunk );
     virtual ~IndexWriter();
+    static void test( Filenames* fns );
+    static void write( PreprocessFiles* fns, ReadId indexChunk, ReadId markChunk );
     
 private:
+    IndexWriter( Filenames* fns );
+    void testBwt();
     void writeIndex();
     void writeMers( PreprocessFiles* fns );
     

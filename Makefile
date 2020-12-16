@@ -1,14 +1,30 @@
 PREFIX = /usr/local/bin/
-INC=-Isrc -Isrc/commands -Isrc/index -Isrc/shared -Isrc/transform
-VPATH=src:src/commands:src/index:src/shared:src/transform
+DBG=-g
+INC=-Isrc -Isrc/commands -Isrc/index -Isrc/shared -Isrc/transform -Isrc/search
+VPATH=src:src/commands:src/index:src/shared:src/transform:src/search
 
 SRCS =  \
+	coverage.cpp \
 	leanbwt.cpp \
 	filenames.cpp \
 	index.cpp \
 	index_reader.cpp \
 	index_structs.cpp \
 	index_writer.cpp \
+	local_alignment.cpp \
+	match.cpp \
+	match_query.cpp \
+	overlap.cpp \
+	overlap_query.cpp \
+	parameters.cpp \
+	query_binary.cpp \
+	query_extension.cpp \
+	query_flay.cpp \
+	query_overlap.cpp \
+	query_structs.cpp \
+	shared_functions.cpp \
+	shared_structs.cpp \
+	test.cpp \
 	timer.cpp \
 	transform.cpp \
 	transform_bwt.cpp \
